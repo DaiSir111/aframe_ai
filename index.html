@@ -77,8 +77,61 @@
     #model-container.visible {
       visibility: visible;
     }
+    #status-indicator {
+      display: none;
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(76, 175, 80, 0.9);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 5px;
+      z-index: 1000;
+      max-width: 70%;
+      text-align: center;
+      font-size: 14px;
+    }
+    
+    #loading-indicator {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 20px;
+      border-radius: 5px;
+      z-index: 1002;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top: 4px solid white;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
     a-scene {
       display: none;
+    }
+    
+    #model-container {
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+    }
+    
+    #model-container.visible {
+      opacity: 1;
     }
   </style>
 </head>
@@ -93,21 +146,39 @@
     <p>无法访问摄像头。请确保已授予浏览器摄像头权限，并刷新页面重试。</p>
   </div>
   
+  <!-- 状态指示器 -->
+  <div id="status-indicator">
+    <p>准备就绪，请将摄像头对准标记图案</p>
+  </div>
+  
+  <!-- 加载指示器 -->
+  <div id="loading-indicator">
+    <div class="spinner"></div>
+    <p>正在初始化AR体验...</p>
+  </div>
+  
   <!-- 简化AR.js配置，避免潜在的兼容性问题 -->
   <a-scene arjs="debugUIEnabled: false" embedded>
     <!-- 添加光源以提高模型可见度 -->
     <a-light type="ambient" color="#ffffff" intensity="0.8"></a-light>
     <a-light type="directional" color="#ffffff" intensity="0.5" position="1 1 1"></a-light>
     
-    <!-- 3D模型容器，默认隐藏 -->
-    <a-entity id="model-container"
-      animation="property: rotation; to: 0 360 0; loop: true; dur:5000">
-      <!-- 3D模型实体 -->
-      <a-entity gltf-model="./assets/models/caroon-gltf/scene.gltf" position="0 1 0" scale="1 1 1"></a-entity>
-    </a-entity>
-    
-    <!-- 标记相机配置 -->
-    <a-marker-camera preset="pattern" type="pattern" url="assets/patterns/pattern.patt"></a-marker-camera>
+    <!-- 标记相机配置 - 优化的AR.js标记配置 -->
+    <a-marker-camera 
+      preset="pattern" 
+      type="pattern" 
+      url="assets/patterns/pattern.patt"
+      smooth="true"
+      smoothCount="5"
+      smoothTolerance="0.1"
+      smoothThreshold="2">
+      <!-- 3D模型直接放在标记相机内部，这是AR.js中最可靠的做法 -->
+      <a-entity id="model-container"
+        animation="property: rotation; to: 0 360 0; loop: true; dur:5000">
+        <!-- 3D模型实体 - 调整位置和大小以确保可见性 -->
+        <a-entity gltf-model="./assets/models/caroon-gltf/scene.gltf" position="0 0.5 0" scale="1 1 1"></a-entity>
+      </a-entity>
+    </a-marker-camera>
   </a-scene>
   
   <script>
@@ -115,25 +186,73 @@
       const startButton = document.getElementById('start-ar-button');
       const permissionMessage = document.getElementById('camera-permission-message');
       const errorMessage = document.getElementById('error-message');
+      const statusIndicator = document.getElementById('status-indicator');
+      const loadingIndicator = document.getElementById('loading-indicator');
       const scene = document.querySelector('a-scene');
+      
+      // 避免页面加载时自动显示错误消息
+      errorMessage.style.display = 'none';
+      statusIndicator.style.display = 'none';
+      loadingIndicator.style.display = 'none';
       
       startButton.addEventListener('click', async function() {
         try {
-          // 尝试直接请求摄像头权限
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          stream.getTracks().forEach(track => track.stop());
+          // 显示加载指示器
+          loadingIndicator.style.display = 'block';
+          errorMessage.style.display = 'none';
           
-          // 隐藏权限消息，显示AR场景
+          log('尝试获取摄像头权限...');
+          
+          // 尝试使用更宽松的摄像头约束，避免设备兼容性问题
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: true
+          });
+          
+          log('成功获取摄像头权限，流中包含 ' + stream.getTracks().length + ' 个轨道');
+          
+          // 立即停止临时流
+          stream.getTracks().forEach(track => {
+            log('停止临时轨道: ' + track.kind + ', ' + track.label);
+            track.stop();
+          });
+          
+          // 隐藏权限消息和加载指示器，显示AR场景和状态提示
           permissionMessage.style.display = 'none';
+          loadingIndicator.style.display = 'none';
           scene.style.display = 'block';
+          statusIndicator.style.display = 'block';
           
-          // 重新加载场景以应用设置
-          scene.reload();
+          // 场景已准备就绪，无需额外的reload操作
+          log('AR场景已准备就绪，可以开始使用了...');
+          
         } catch (err) {
-          console.error('摄像头访问错误:', err);
+          log('摄像头访问错误: ' + err.name + ': ' + err.message);
+          
+          // 隐藏加载指示器
+          loadingIndicator.style.display = 'none';
+          
+          // 根据错误类型提供更具体的提示
+          let errorText = '';
+          if (err.name === 'NotAllowedError') {
+            errorText = '您拒绝了摄像头访问权限。请在浏览器设置中允许摄像头访问，然后点击下方按钮重试。';
+          } else if (err.name === 'NotFoundError') {
+            errorText = '未找到可用的摄像头设备。请确保您的设备有摄像头，并且驱动程序已正确安装。';
+          } else if (err.name === 'NotReadableError') {
+            errorText = '摄像头被其他应用程序占用。请关闭可能正在使用摄像头的其他程序，然后点击下方按钮重试。';
+          } else {
+            errorText = '无法访问摄像头: ' + err.message + '，请点击下方按钮重试。';
+          }
+          
+          errorMessage.querySelector('p').textContent = errorText;
           errorMessage.style.display = 'block';
         }
       });
+    
+    // 辅助函数：显示日志
+    function log(message) {
+      console.log('[AR体验] ' + message);
+      // 在实际应用中，您可以添加UI元素来显示这些日志
+    }
       
       // 添加错误消息关闭按钮
       const closeButton = document.createElement('button');
@@ -144,22 +263,10 @@
       };
       errorMessage.appendChild(closeButton);
       
-      // 优化的AR.js错误事件监听
+      // 优化的AR.js错误事件监听 - 减少自动显示错误消息
       scene.addEventListener('error', function(event) {
         console.error('AR.js错误:', event.detail);
-        // 只显示关键错误，忽略非关键错误
-        const criticalErrors = ['NotAllowedError', 'NotFoundError', 'NotReadableError'];
-        const errorName = event.detail && event.detail.name ? event.detail.name : '';
-        
-        if (criticalErrors.includes(errorName)) {
-          errorMessage.querySelector('p').textContent = 'AR体验加载失败: ' + (event.detail && event.detail.message ? event.detail.message : '未知错误');
-          errorMessage.style.display = 'block';
-          
-          // 5秒后自动隐藏错误消息
-          setTimeout(function() {
-            errorMessage.style.display = 'none';
-          }, 5000);
-        }
+        // 只记录错误，不自动显示错误消息，避免干扰用户体验
       });
       
       // 监听场景加载完成事件
@@ -172,33 +279,50 @@
         console.log('摄像头设备状态变更');
       });
       
-      // 监听标记识别事件 - 只有识别到标记时才显示模型
+      // 监听标记识别事件 - 简化逻辑，因为模型现在在标记相机内部
       const markerCamera = document.querySelector('a-marker-camera');
       
       markerCamera.addEventListener('markerFound', function() {
-        console.log('标记已识别');
-        const modelContainer = document.getElementById('model-container');
-        modelContainer.classList.add('visible');
+        log('标记已识别，AR.js将自动显示模型');
+        statusIndicator.querySelector('p').textContent = '已识别到标记，正在显示模型';
       });
       
       markerCamera.addEventListener('markerLost', function() {
-        console.log('标记已丢失');
-        const modelContainer = document.getElementById('model-container');
-        modelContainer.classList.remove('visible');
+        log('标记已丢失，AR.js将自动隐藏模型');
+        statusIndicator.querySelector('p').textContent = '请将摄像头对准标记图案';
       });
       
-      // 提供刷新页面按钮在错误消息中
-      const refreshButton = document.createElement('button');
-      refreshButton.textContent = '刷新页面';
-      refreshButton.style.marginTop = '10px';
-      refreshButton.style.backgroundColor = '#008CBA';
-      refreshButton.style.border = 'none';
-      refreshButton.style.color = 'white';
-      refreshButton.style.padding = '10px 20px';
-      refreshButton.style.borderRadius = '5px';
-      refreshButton.style.cursor = 'pointer';
-      refreshButton.onclick = function() { location.reload(); };
-      errorMessage.appendChild(refreshButton);
+      // 添加模型加载完成事件监听并输出详细信息
+      const modelEntity = document.querySelector('[gltf-model]');
+      modelEntity.addEventListener('model-loaded', function() {
+        log('3D模型加载完成');
+        console.log('模型加载完成，ID:', modelEntity.id);
+        console.log('模型位置:', modelEntity.getAttribute('position'));
+        console.log('模型缩放:', modelEntity.getAttribute('scale'));
+      });
+      
+      // 添加模型错误事件监听
+      modelEntity.addEventListener('model-error', function(e) {
+        log('模型加载错误: ' + e.detail);
+        console.error('模型加载错误详情:', e);
+      });
+      
+      // 提供重试按钮在错误消息中（替代刷新页面）
+      const retryButton = document.createElement('button');
+      retryButton.textContent = '重试';
+      retryButton.style.marginTop = '10px';
+      retryButton.style.backgroundColor = '#008CBA';
+      retryButton.style.border = 'none';
+      retryButton.style.color = 'white';
+      retryButton.style.padding = '10px 20px';
+      retryButton.style.borderRadius = '5px';
+      retryButton.style.cursor = 'pointer';
+      retryButton.onclick = function() {
+        errorMessage.style.display = 'none';
+        // 直接触发开始按钮的点击事件
+        startButton.click();
+      };
+      errorMessage.appendChild(retryButton);
     });
   </script>
 </body>
