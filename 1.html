@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>美少女</title>
+    <!-- 使用兼容的版本组合 -->
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script src="https://unpkg.com/@ar-js-org/ar.js@3.4.3/aframe/build/aframe-ar.js"></script>
+  <style>
+    #camera-permission-message {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    #start-ar-button {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 15px 32px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin: 20px 0;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    #error-message {
+      display: none;
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(244, 67, 54, 0.9);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 5px;
+      z-index: 1001;
+      max-width: 70%;
+      text-align: center;
+      font-size: 14px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      transition: opacity 0.3s ease;
+    }
+    #error-message .close-btn {
+      position: absolute;
+      top: 5px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 0;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    #model-container {
+      visibility: hidden;
+    }
+    #model-container.visible {
+      visibility: visible;
+    }
+    a-scene {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="camera-permission-message">
+    <h1>增强现实体验</h1>
+    <p>请点击下方按钮授权访问摄像头以查看AR效果。将摄像头对准标记图案，即可看到3D模型。</p>
+    <button id="start-ar-button">开始AR体验</button>
+  </div>
+  
+  <div id="error-message">
+    <p>无法访问摄像头。请确保已授予浏览器摄像头权限，并刷新页面重试。</p>
+  </div>
+  
+  <!-- 简化AR.js配置，避免潜在的兼容性问题 -->
+  <a-scene arjs="debugUIEnabled: false" embedded>
+    <!-- 添加光源以提高模型可见度 -->
+    <a-light type="ambient" color="#ffffff" intensity="0.8"></a-light>
+    <a-light type="directional" color="#ffffff" intensity="0.5" position="1 1 1"></a-light>
+    
+    <!-- 3D模型容器，默认隐藏 -->
+    <a-entity id="model-container"
+      animation="property: rotation; to: 0 360 0; loop: true; dur:5000">
+      <!-- 3D模型实体 -->
+      <a-entity gltf-model="./assets/models/caroon-gltf/scene.gltf" position="0 1 0" scale="1 1 1"></a-entity>
+    </a-entity>
+    
+    <!-- 标记相机配置 -->
+    <a-marker-camera preset="pattern" type="pattern" url="assets/patterns/pattern.patt"></a-marker-camera>
+  </a-scene>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const startButton = document.getElementById('start-ar-button');
+      const permissionMessage = document.getElementById('camera-permission-message');
+      const errorMessage = document.getElementById('error-message');
+      const scene = document.querySelector('a-scene');
+      
+      startButton.addEventListener('click', async function() {
+        try {
+          // 尝试直接请求摄像头权限
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          stream.getTracks().forEach(track => track.stop());
+          
+          // 隐藏权限消息，显示AR场景
+          permissionMessage.style.display = 'none';
+          scene.style.display = 'block';
+          
+          // 重新加载场景以应用设置
+          scene.reload();
+        } catch (err) {
+          console.error('摄像头访问错误:', err);
+          errorMessage.style.display = 'block';
+        }
+      });
+      
+      // 添加错误消息关闭按钮
+      const closeButton = document.createElement('button');
+      closeButton.className = 'close-btn';
+      closeButton.textContent = '×';
+      closeButton.onclick = function() {
+        errorMessage.style.display = 'none';
+      };
+      errorMessage.appendChild(closeButton);
+      
+      // 优化的AR.js错误事件监听
+      scene.addEventListener('error', function(event) {
+        console.error('AR.js错误:', event.detail);
+        // 只显示关键错误，忽略非关键错误
+        const criticalErrors = ['NotAllowedError', 'NotFoundError', 'NotReadableError'];
+        const errorName = event.detail && event.detail.name ? event.detail.name : '';
+        
+        if (criticalErrors.includes(errorName)) {
+          errorMessage.querySelector('p').textContent = 'AR体验加载失败: ' + (event.detail && event.detail.message ? event.detail.message : '未知错误');
+          errorMessage.style.display = 'block';
+          
+          // 5秒后自动隐藏错误消息
+          setTimeout(function() {
+            errorMessage.style.display = 'none';
+          }, 5000);
+        }
+      });
+      
+      // 监听场景加载完成事件
+      scene.addEventListener('loaded', function() {
+        console.log('AR场景加载完成');
+      });
+      
+      // 监听相机访问错误
+      navigator.mediaDevices.addEventListener('devicechange', function() {
+        console.log('摄像头设备状态变更');
+      });
+      
+      // 监听标记识别事件 - 只有识别到标记时才显示模型
+      const markerCamera = document.querySelector('a-marker-camera');
+      
+      markerCamera.addEventListener('markerFound', function() {
+        console.log('标记已识别');
+        const modelContainer = document.getElementById('model-container');
+        modelContainer.classList.add('visible');
+      });
+      
+      markerCamera.addEventListener('markerLost', function() {
+        console.log('标记已丢失');
+        const modelContainer = document.getElementById('model-container');
+        modelContainer.classList.remove('visible');
+      });
+      
+      // 提供刷新页面按钮在错误消息中
+      const refreshButton = document.createElement('button');
+      refreshButton.textContent = '刷新页面';
+      refreshButton.style.marginTop = '10px';
+      refreshButton.style.backgroundColor = '#008CBA';
+      refreshButton.style.border = 'none';
+      refreshButton.style.color = 'white';
+      refreshButton.style.padding = '10px 20px';
+      refreshButton.style.borderRadius = '5px';
+      refreshButton.style.cursor = 'pointer';
+      refreshButton.onclick = function() { location.reload(); };
+      errorMessage.appendChild(refreshButton);
+    });
+  </script>
+</body>
+</html>
