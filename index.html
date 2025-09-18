@@ -63,6 +63,9 @@
     document.querySelector('#marker').addEventListener('markerLost', () => {
       logDebug('ℹ️ Marker 丢失');
     });
+    document.querySelector('#marker').addEventListener('markerFound', () => {
+      logDebug('✅ Marker 已识别');
+    });
   </script>
 </body>
 </html>
