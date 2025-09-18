@@ -3,61 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hiro Marker Test - Debug</title>
+  <title>Document</title>
+    <!-- 使用兼容的版本组合 -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   <script src="https://unpkg.com/@ar-js-org/ar.js@3.4.3/aframe/build/aframe-ar.js"></script>
-  <style>
-    #debug {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(0,0,0,0.7);
-      color: #0f0;
-      font-size: 12px;
-      padding: 5px;
-      border-radius: 5px;
-      max-width: 90%;
-      z-index: 9999;
-    }
-  </style>
 </head>
 <body>
-  <div id="debug">📡 Debug Info:</div>
-
-<a-scene  
-  embedded
-  arjs="debugUIEnabled: true; sourceType: webcam; sourceWidth:640; sourceHeight:480; displayWidth:640; displayHeight:480; detectionMode: mono; patternRatio: 0.7;">
-  
-  <a-marker preset="hiro" id="marker">
-    <a-box position="0 0.5 0" scale="0.7 0.7 0.7" material="color: red;"></a-box>
-  </a-marker>
-
-  <a-entity camera></a-entity>
-</a-scene>
-
-  <script>
-    const debugBox = document.getElementById('debug');
-    function logDebug(msg) {
-      console.log(msg);
-      debugBox.innerHTML += "<br>" + msg;
-    }
-
-    // 页面加载
-    window.addEventListener('load', () => logDebug('✅ 页面已加载'));
-
-    // 摄像头启动成功
-    document.querySelector('a-scene').addEventListener('camera-init', () => {
-      logDebug('📷 摄像头初始化成功');
-    });
-
-    // 摄像头启动失败
-    document.querySelector('a-scene').addEventListener('camera-error', (err) => {
-      logDebug('❌ 摄像头启动失败: ' + JSON.stringify(err));
-    });
-
-    // marker 识别监听
-    document.querySelector('#marker').addEventListener('markerFound', () => logDebug('✅ Hiro Marker 已识别'));
-    document.querySelector('#marker').addEventListener('markerLost', () => logDebug('ℹ️ Hiro Marker 丢失'));
-  </script>
+  <a-scene arjs embedded>
+    <a-entity gltf-model="./assets/models/caroon-gltf/scene.gltf" position="0 1 0"
+      animation="property: rotation; to: 0 360 0; loop: true; dur: 3000">
+    </a-entity>
+    <a-marker-camera type="pattern" url="./assets/patterns/pattern.patt">
+      
+    </a-marker-camera>
+  </a-scene>
 </body>
 </html>
