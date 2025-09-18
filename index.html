@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR Debug</title>
+  <title>Hiro Marker Test</title>
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   <script src="https://unpkg.com/@ar-js-org/ar.js@3.4.3/aframe/build/aframe-ar.js"></script>
   <style>
@@ -17,22 +17,18 @@
       padding: 5px;
       border-radius: 5px;
       max-width: 90%;
-      word-break: break-word;
       z-index: 9999;
     }
   </style>
 </head>
 <body>
   <div id="debug">📡 Debug Info:</div>
-  
+
   <a-scene embedded arjs>
-    <a-marker type="pattern" url="assets/patterns/pattern.patt" id="marker">
-      <a-entity 
-        gltf-model="./assets/models/caroon-gltf/scene.gltf"
-        scale="0.05 0.05 0.05"
-        position="0 0 0"
-        rotation="0 0 0">
-      </a-entity>
+    <!-- 使用官方 Hiro marker 预设 -->
+    <a-marker preset="hiro" id="marker">
+      <!-- 用简单的红色盒子替代你的 glTF 模型 -->
+      <a-box position="0 0.5 0" material="color: red;"></a-box>
     </a-marker>
     <a-entity camera></a-entity>
   </a-scene>
@@ -44,28 +40,9 @@
       debugBox.innerHTML += "<br>" + msg;
     }
 
-    // 监听页面加载
     window.addEventListener('load', () => logDebug('✅ 页面已加载'));
-
-    // 监听 glTF 模型加载
-    document.querySelector('[gltf-model]').addEventListener('model-loaded', () => {
-      logDebug('✅ 模型加载成功');
-    });
-
-    document.querySelector('[gltf-model]').addEventListener('model-error', (e) => {
-      logDebug('❌ 模型加载失败: ' + JSON.stringify(e.detail));
-    });
-
-    // 监听 marker 识别
-    document.querySelector('#marker').addEventListener('markerFound', () => {
-      logDebug('✅ Marker 已识别');
-    });
-    document.querySelector('#marker').addEventListener('markerLost', () => {
-      logDebug('ℹ️ Marker 丢失');
-    });
-    document.querySelector('#marker').addEventListener('markerFound', () => {
-      logDebug('✅ Marker 已识别');
-    });
+    document.querySelector('#marker').addEventListener('markerFound', () => logDebug('✅ Hiro Marker 已识别'));
+    document.querySelector('#marker').addEventListener('markerLost', () => logDebug('ℹ️ Hiro Marker 丢失'));
   </script>
 </body>
 </html>
