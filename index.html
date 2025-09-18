@@ -24,7 +24,9 @@
 <body>
   <div id="debug">📡 Debug Info:</div>
 
-  <a-scene embedded arjs>
+  <a-scene  
+    embedded
+    arjs="sourceType: webcam; sourceWidth:1280; sourceHeight:720; displayWidth:1280; displayHeight:720;">
     <!-- 使用官方 Hiro marker 预设 -->
     <a-marker preset="hiro" id="marker">
       <!-- 用简单的红色盒子替代你的 glTF 模型 -->
