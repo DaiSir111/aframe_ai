@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hiro Marker Test</title>
+  <title>Hiro Marker Test - Debug</title>
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   <script src="https://unpkg.com/@ar-js-org/ar.js@3.4.3/aframe/build/aframe-ar.js"></script>
   <style>
@@ -26,12 +26,12 @@
 
   <a-scene  
     embedded
-    arjs="sourceType: webcam; sourceWidth:1280; sourceHeight:720; displayWidth:1280; displayHeight:720;">
-    <!-- 使用官方 Hiro marker 预设 -->
+    arjs="debugUIEnabled: true; sourceType: webcam; sourceWidth:1280; sourceHeight:720; displayWidth:1280; displayHeight:720;">
+    
     <a-marker preset="hiro" id="marker">
-      <!-- 用简单的红色盒子替代你的 glTF 模型 -->
       <a-box position="0 0.5 0" material="color: red;"></a-box>
     </a-marker>
+
     <a-entity camera></a-entity>
   </a-scene>
 
@@ -42,7 +42,20 @@
       debugBox.innerHTML += "<br>" + msg;
     }
 
+    // 页面加载
     window.addEventListener('load', () => logDebug('✅ 页面已加载'));
+
+    // 摄像头启动成功
+    document.querySelector('a-scene').addEventListener('camera-init', () => {
+      logDebug('📷 摄像头初始化成功');
+    });
+
+    // 摄像头启动失败
+    document.querySelector('a-scene').addEventListener('camera-error', (err) => {
+      logDebug('❌ 摄像头启动失败: ' + JSON.stringify(err));
+    });
+
+    // marker 识别监听
     document.querySelector('#marker').addEventListener('markerFound', () => logDebug('✅ Hiro Marker 已识别'));
     document.querySelector('#marker').addEventListener('markerLost', () => logDebug('ℹ️ Hiro Marker 丢失'));
   </script>
